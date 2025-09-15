@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@tailwindcss/postcss": "^4.1.13",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2.5.0",
+    "autoprefixer": "^10.4.21",
     "element-plus": "^2.11.2",
     "pinia": "^2.3.1",
     "scss": "^0.2.4",
@@ -22,7 +24,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.4",
     "@tsconfig/node22": "^22.0.2",
-    "@types/node": "^22.18.1",
+    "@types/node": "^22.18.3",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vue/tsconfig": "^0.7.0",
     "postcss": "^8.5.6",

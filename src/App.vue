@@ -16,9 +16,6 @@ export default defineComponent({
 <style>
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
   text-decoration: none !important;
   text-decoration-line: none !important;
 
@@ -44,5 +41,5 @@ export default defineComponent({
 a {
   text-decoration: none !important;
   text-decoration-line: none !important;
-}
+  }
 </style>
