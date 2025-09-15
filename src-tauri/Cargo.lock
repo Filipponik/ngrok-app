@@ -2520,7 +2520,6 @@ dependencies = [
  "hyper",
  "hyper-util",
  "ngrok",
- "once_cell",
  "serde",
  "serde_json",
  "tauri",
