@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { Plus } from "@element-plus/icons-vue";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useRouter } from "vue-router";
+import { openSession } from '@/services/session';
 
 const greetMsg = ref("");
 const name = ref("");
+const router = useRouter();
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   greetMsg.value = await invoke("greet", { name: name.value });
 }
+
+onMounted(async () => {
+  openSession()
+    .catch(() => {
+      console.log('No session');
+      router.push({ name: 'open-session' });
+    })
+});
 </script>
 
 <template>
@@ -39,7 +50,8 @@ async function greet() {
         round
         style="width: 240px"
         type="primary"
-        to="/create-tunnel"
+        to="/tunnel/create"
+        class="m-5"
         >Create Tunnel</el-button
       >
     </div>

@@ -13,6 +13,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "@tailwindcss/postcss": "^4.1.13",
     "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-clipboard-manager": "~2.3.0",
     "@tauri-apps/plugin-opener": "^2.5.0",
     "autoprefixer": "^10.4.21",
     "element-plus": "^2.11.2",
