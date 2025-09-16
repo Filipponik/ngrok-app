@@ -1,31 +1,129 @@
-mod ngrok;
+use ngrok::tunnel::EndpointInfo;
+use serde::Serialize;
+use tauri::{AppHandle, Manager};
+use tokio::{
+    io::AsyncWriteExt,
+    sync::{Mutex, OnceCell},
+};
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+mod ngrok_wrapper;
+
+pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
 
 #[tauri::command]
-async fn create_tunnel(auth_token: &str, domain: &str, port: &str) -> Result<(), String> {
+async fn tunnel_open(domain: &str, port: &str) -> Result<(), String> {
     let domain = if domain.is_empty() {
         None
     } else {
         Some(domain)
     };
 
-    ngrok::create_tunnel(auth_token, domain, port)
+    ngrok_wrapper::open_tunnel(domain, port)
         .await
-        .unwrap();
+        .expect("Failed to create tunnel");
 
     Ok(())
+}
+
+#[tauri::command]
+async fn tunnel_close(id: &str) -> Result<(), String> {
+    ngrok_wrapper::close_tunnel(id)
+        .await
+        .expect("Failed to create tunnel");
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TunnelResponse {
+    id: String,
+    url: String,
+}
+
+#[tauri::command]
+async fn tunnel_list() -> Vec<TunnelResponse> {
+    ngrok_wrapper::get_tunnels()
+        .await
+        .into_iter()
+        .map(|tunnel| TunnelResponse {
+            id: tunnel.key().to_string(),
+            url: tunnel.value().url().to_string(),
+        })
+        .collect()
+}
+
+#[tauri::command]
+async fn open_session(auth_token: Option<&str>) -> Result<(), String> {
+    let token = if let Some(input_token) = auth_token {
+        input_token.to_string()
+    } else {
+        if let Ok(token) = get_token().await {
+            token
+        } else {
+            return Err("No token found".to_string());
+        }
+    };
+
+    println!("Open session with {token}");
+
+    ngrok_wrapper::get_session(token.clone()).await?;
+    set_token(&token).await;
+    Ok(())
+}
+
+async fn get_token() -> Result<String, String> {
+    let mut config_file = APP_HANDLE
+        .get()
+        .unwrap()
+        .lock()
+        .await
+        .path()
+        .app_config_dir()
+        .unwrap();
+    config_file.push("token.txt");
+
+    let token = tokio::fs::read_to_string(config_file)
+        .await
+        .map_err(|e| format!("Cannot read file {e:?}"))?;
+
+    if token.is_empty() {
+        Err("Token file is empty".to_string())
+    } else {
+        Ok(token)
+    }
+}
+
+async fn set_token(auth_token: &str) {
+    let mut config_file = APP_HANDLE
+        .get()
+        .unwrap()
+        .lock()
+        .await
+        .path()
+        .app_config_dir()
+        .unwrap();
+
+    tokio::fs::create_dir_all(&config_file).await.unwrap();
+    config_file.push("token.txt");
+    let mut file = tokio::fs::File::create(&config_file).await.unwrap();
+    file.write_all(auth_token.as_bytes()).await.unwrap();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, create_tunnel,])
+        .invoke_handler(tauri::generate_handler![
+            tunnel_open,
+            tunnel_close,
+            open_session,
+            tunnel_list,
+        ])
+        .setup(|app: &mut tauri::App| {
+            APP_HANDLE.set(Mutex::new(app.handle().clone())).unwrap();
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -3,7 +3,7 @@ use ngrok::{
     Session,
     config::{ForwarderBuilder, HttpTunnelBuilder},
     forwarder::Forwarder,
-    tunnel::{EndpointInfo, HttpTunnel, TunnelInfo},
+    tunnel::{EndpointInfo, HttpTunnel, TunnelCloser, TunnelInfo},
 };
 use tokio::sync::OnceCell;
 use url::Url;
@@ -11,14 +11,13 @@ use url::Url;
 static TUNNELS: OnceCell<DashMap<String, Forwarder<HttpTunnel>>> = OnceCell::const_new();
 static SESSION: OnceCell<Session> = OnceCell::const_new();
 
-pub async fn create_tunnel(
-    auth_token: impl Into<String>,
+pub async fn open_tunnel(
     domain: Option<impl Into<String>>,
     port: impl Into<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = port.into();
     // Set up ngrok tunnel
-    let session = get_session(auth_token).await;
+    let session = get_session("").await.unwrap();
 
     let mut tunnel_builder: HttpTunnelBuilder = session.http_endpoint();
     if let Some(domain) = domain {
@@ -38,18 +37,28 @@ pub async fn create_tunnel(
     Ok(())
 }
 
-async fn get_tunnels() -> &'static DashMap<String, Forwarder<HttpTunnel>> {
+pub async fn close_tunnel(id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let tunnels = get_tunnels().await;
+    if let Some((_id, mut tunnel)) = tunnels.remove(id) {
+        tunnel.close().await?;
+        Ok(())
+    } else {
+        Err("Tunnel not found".into())
+    }
+}
+
+pub async fn get_tunnels() -> &'static DashMap<String, Forwarder<HttpTunnel>> {
     TUNNELS.get_or_init(|| async { DashMap::new() }).await
 }
 
-async fn get_session(auth_token: impl Into<String>) -> &'static Session {
+pub async fn get_session(auth_token: impl Into<String>) -> Result<&'static Session, String> {
     SESSION
-        .get_or_init(|| async {
+        .get_or_try_init(|| async {
             ngrok::Session::builder()
                 .authtoken(auth_token)
                 .connect()
                 .await
-                .unwrap()
         })
         .await
+        .map_err(|e| format!("Failed to create ngrok session: {}", e))
 }
