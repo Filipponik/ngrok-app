@@ -16,8 +16,6 @@ async function getTunnels() {
   tunnels.value = await getTunnelsFromApi();
 }
 
-
-
 async function copyUrl(url: string, id: string) {
   await writeText(url);
 
