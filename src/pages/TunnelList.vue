@@ -69,7 +69,7 @@ onMounted(async () => {
       <el-table-column prop="url" label="url">
         <template #default="scope">
           <el-link type="primary" @click="openUrl(scope.row.url)">
-            {{ scope.row.url }}
+            {{ scope.row.url.replace('https://', '') }}
           </el-link>
         </template>
       </el-table-column>
@@ -81,7 +81,7 @@ onMounted(async () => {
               >Static domain</el-tag
             >
             <el-tag
-              v-if="scope.row.headers.find((header) => header.name === 'Host')"
+              v-if="scope.row.headers.find((header: any) => header.name === 'Host')"
               type="primary"
               >Host rewrite</el-tag
             >
