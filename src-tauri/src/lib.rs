@@ -1,5 +1,4 @@
-use ngrok::tunnel::EndpointInfo;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::{
     io::AsyncWriteExt,
@@ -12,21 +11,31 @@ mod ngrok_wrapper;
 
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
 
-#[tauri::command]
-async fn tunnel_open(
-    port: &str,
-    domain: Option<&str>,
-    host_rewrite: Option<&str>,
-) -> Result<(), String> {
-    let domain = domain.and_then(|d| if d.is_empty() { None } else { Some(d) });
-    let host_rewrite = host_rewrite.and_then(|h| if h.is_empty() { None } else { Some(h) });
-    let headers = if let Some(host) = host_rewrite {
-        vec![Header::new_host_rewrite(host)]
-    } else {
-        vec![]
-    };
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct TunnelOpen {
+    port: String,
+    domain: Option<String>,
+    host_rewrite: Option<String>,
+    headers: Vec<Header>,
+}
 
-    ngrok_wrapper::open_tunnel(domain, port, headers)
+#[tauri::command]
+async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
+    let domain = command
+        .domain
+        .clone()
+        .and_then(|d| if d.is_empty() { None } else { Some(d) });
+    let host_rewrite = command
+        .host_rewrite
+        .clone()
+        .and_then(|h| if h.is_empty() { None } else { Some(h) });
+
+    let mut headers = command.headers;
+    if let Some(host) = host_rewrite {
+        headers.push(Header::new_host_rewrite(host));
+    }
+
+    ngrok_wrapper::open_tunnel(domain, command.port, headers)
         .await
         .expect("Failed to create tunnel");
 
@@ -46,6 +55,9 @@ async fn tunnel_close(id: &str) -> Result<(), String> {
 struct TunnelResponse {
     id: String,
     url: String,
+    port: String,
+    is_static_domain: bool,
+    headers: Vec<Header>,
 }
 
 #[tauri::command]
@@ -53,9 +65,15 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
     ngrok_wrapper::get_tunnels()
         .await
         .into_iter()
-        .map(|tunnel| TunnelResponse {
-            id: tunnel.key().to_string(),
-            url: tunnel.value().url().to_string(),
+        .map(|tunnel| {
+            let tunnel = tunnel.value();
+            TunnelResponse {
+                id: tunnel.id.clone(),
+                url: tunnel.url.clone(),
+                port: tunnel.port.clone(),
+                is_static_domain: tunnel.is_static_domain,
+                headers: tunnel.request_headers.clone(),
+            }
         })
         .collect()
 }

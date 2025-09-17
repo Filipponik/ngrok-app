@@ -12,9 +12,13 @@ const router = useRouter();
 
 async function createTunnel() {
   if (!advanced.value) {
-    await openTunnel(port.value);
+    await openTunnel({ port: port.value });
   } else {
-    await openTunnel(port.value, domain.value, host_rewrite.value);
+    await openTunnel({
+      port: port.value,
+      domain: domain.value,
+      host_rewrite: host_rewrite.value,
+    });
   }
   router.push({ name: "tunnel-list" });
 }

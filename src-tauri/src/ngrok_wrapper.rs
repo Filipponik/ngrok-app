@@ -5,12 +5,14 @@ use ngrok::{
     forwarder::Forwarder,
     tunnel::{EndpointInfo, HttpTunnel, TunnelCloser, TunnelInfo},
 };
+use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
 use url::Url;
 
-static TUNNELS: OnceCell<DashMap<String, Forwarder<HttpTunnel>>> = OnceCell::const_new();
+static TUNNELS: OnceCell<DashMap<String, TunnelOpened>> = OnceCell::const_new();
 static SESSION: OnceCell<Session> = OnceCell::const_new();
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Header {
     pub name: String,
     pub value: String,
@@ -19,10 +21,21 @@ pub struct Header {
 impl Header {
     pub fn new_host_rewrite(host: impl Into<String>) -> Self {
         Header {
-            name: "host".to_string(),
+            name: "Host".to_string(),
             value: host.into(),
         }
     }
+}
+
+#[derive(Serialize)]
+pub struct TunnelOpened {
+    pub id: String,
+    pub url: String,
+    pub port: String,
+    pub is_static_domain: bool,
+    pub request_headers: Vec<Header>,
+    #[serde(skip)]
+    inner: Forwarder<HttpTunnel>,
 }
 
 pub async fn open_tunnel(
@@ -31,16 +44,17 @@ pub async fn open_tunnel(
     headers: Vec<Header>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = port.into();
+    let domain: Option<String> = domain.and_then(|domain| Some(domain.into()));
     // Set up ngrok tunnel
     let session = get_session("").await.unwrap();
 
     let mut tunnel_builder: HttpTunnelBuilder = session.http_endpoint();
-    if let Some(domain) = domain {
-        tunnel_builder.domain(domain.into().clone());
+    if let Some(domain) = domain.clone() {
+        tunnel_builder.domain(domain);
     }
 
-    for header in headers {
-        tunnel_builder.request_header(header.name, header.value);
+    for header in &headers {
+        tunnel_builder.request_header(header.name.clone(), header.value.clone());
     }
 
     // Forward HTTP traffic from ngrok to the local server
@@ -51,7 +65,16 @@ pub async fn open_tunnel(
     println!("Ngrok tunnel established at {}", tunnel.url());
 
     let tunnels = get_tunnels().await;
-    tunnels.insert(tunnel.id().to_string(), tunnel);
+    let tunnel_opened = TunnelOpened {
+        id: tunnel.id().to_string(),
+        url: tunnel.url().to_string(),
+        port,
+        is_static_domain: domain.is_some(),
+        request_headers: headers,
+        inner: tunnel,
+    };
+
+    tunnels.insert(tunnel_opened.id.clone(), tunnel_opened);
 
     Ok(())
 }
@@ -59,14 +82,14 @@ pub async fn open_tunnel(
 pub async fn close_tunnel(id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let tunnels = get_tunnels().await;
     if let Some((_id, mut tunnel)) = tunnels.remove(id) {
-        tunnel.close().await?;
+        tunnel.inner.close().await?;
         Ok(())
     } else {
         Err("Tunnel not found".into())
     }
 }
 
-pub async fn get_tunnels() -> &'static DashMap<String, Forwarder<HttpTunnel>> {
+pub async fn get_tunnels() -> &'static DashMap<String, TunnelOpened> {
     TUNNELS.get_or_init(|| async { DashMap::new() }).await
 }
 

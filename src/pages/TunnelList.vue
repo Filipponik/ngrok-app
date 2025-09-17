@@ -10,23 +10,21 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openPath } from "@tauri-apps/plugin-opener";
 
 const tunnels = ref<Tunnel[]>([]);
-const copyStates = reactive<{ [id: string]: boolean }>({})
+const copyStates = reactive<{ [id: string]: boolean }>({});
 
 async function getTunnels() {
   tunnels.value = await getTunnelsFromApi();
 }
 
-setTimeout(async () => {
-  await getTunnels();
-}, 1000);
+
 
 async function copyUrl(url: string, id: string) {
   await writeText(url);
 
-  copyStates[id] = true
+  copyStates[id] = true;
   setTimeout(() => {
-    copyStates[id] = false
-  }, 1000)
+    copyStates[id] = false;
+  }, 1000);
 }
 
 async function openUrl(url: string) {
@@ -58,8 +56,18 @@ onMounted(async () => {
   </div>
 
   <div class="mx-2 my-3">
-    <el-table :data="tunnels" stripe>
-      <!-- <el-table-column prop="id" label="id" /> -->
+    <el-table :data="tunnels" stripe table-layout="auto">
+      <el-table-column prop="port" label="local port">
+        <template #default="scope">
+          <el-link
+            type="primary"
+            @click="openUrl(`http://localhost:${scope.row.port}`)"
+          >
+            {{ scope.row.port }}
+          </el-link>
+        </template>
+      </el-table-column>
+
       <el-table-column prop="url" label="url">
         <template #default="scope">
           <el-link type="primary" @click="openUrl(scope.row.url)">
@@ -67,11 +75,27 @@ onMounted(async () => {
           </el-link>
         </template>
       </el-table-column>
+
+      <el-table-column prop="tags" label="tags">
+        <template #default="scope">
+          <div class="flex gap-2">
+            <el-tag v-if="scope.row.is_static_domain" type="primary"
+              >Static domain</el-tag
+            >
+            <el-tag
+              v-if="scope.row.headers.find((header) => header.name === 'Host')"
+              type="primary"
+              >Host rewrite</el-tag
+            >
+          </div>
+        </template>
+      </el-table-column>
+
       <el-table-column align="right">
         <template #default="scope">
           <el-button
-          :type="copyStates[scope.row.id] ? 'success' : 'primary'"
-          :icon="copyStates[scope.row.id] ? Check : CopyDocument"
+            :type="copyStates[scope.row.id] ? 'success' : 'primary'"
+            :icon="copyStates[scope.row.id] ? Check : CopyDocument"
             circle
             plain
             @click="copyUrl(scope.row.url, scope.row.id)"
