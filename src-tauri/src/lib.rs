@@ -6,19 +6,27 @@ use tokio::{
     sync::{Mutex, OnceCell},
 };
 
+use crate::ngrok_wrapper::Header;
+
 mod ngrok_wrapper;
 
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
 
 #[tauri::command]
-async fn tunnel_open(domain: &str, port: &str) -> Result<(), String> {
-    let domain = if domain.is_empty() {
-        None
+async fn tunnel_open(
+    port: &str,
+    domain: Option<&str>,
+    host_rewrite: Option<&str>,
+) -> Result<(), String> {
+    let domain = domain.and_then(|d| if d.is_empty() { None } else { Some(d) });
+    let host_rewrite = host_rewrite.and_then(|h| if h.is_empty() { None } else { Some(h) });
+    let headers = if let Some(host) = host_rewrite {
+        vec![Header::new_host_rewrite(host)]
     } else {
-        Some(domain)
+        vec![]
     };
 
-    ngrok_wrapper::open_tunnel(domain, port)
+    ngrok_wrapper::open_tunnel(domain, port, headers)
         .await
         .expect("Failed to create tunnel");
 

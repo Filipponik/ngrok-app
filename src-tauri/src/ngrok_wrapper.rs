@@ -11,9 +11,24 @@ use url::Url;
 static TUNNELS: OnceCell<DashMap<String, Forwarder<HttpTunnel>>> = OnceCell::const_new();
 static SESSION: OnceCell<Session> = OnceCell::const_new();
 
+pub struct Header {
+    pub name: String,
+    pub value: String,
+}
+
+impl Header {
+    pub fn new_host_rewrite(host: impl Into<String>) -> Self {
+        Header {
+            name: "host".to_string(),
+            value: host.into(),
+        }
+    }
+}
+
 pub async fn open_tunnel(
     domain: Option<impl Into<String>>,
     port: impl Into<String>,
+    headers: Vec<Header>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = port.into();
     // Set up ngrok tunnel
@@ -22,6 +37,10 @@ pub async fn open_tunnel(
     let mut tunnel_builder: HttpTunnelBuilder = session.http_endpoint();
     if let Some(domain) = domain {
         tunnel_builder.domain(domain.into().clone());
+    }
+
+    for header in headers {
+        tunnel_builder.request_header(header.name, header.value);
     }
 
     // Forward HTTP traffic from ngrok to the local server
