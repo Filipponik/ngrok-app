@@ -7,6 +7,7 @@ import {
 import { ArrowLeft, Close, CopyDocument, Plus } from "@element-plus/icons-vue";
 import { onMounted, ref } from "vue";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 const tunnels = ref<Tunnel[]>([]);
 
@@ -22,6 +23,10 @@ async function copyUrl(url: string) {
   await writeText(url);
 }
 
+async function openUrl(url: string) {
+  await openPath(url);
+}
+
 async function closeTunnel(id: string) {
   await closeTunnelFromApi(id);
   await getTunnels();
@@ -30,7 +35,6 @@ async function closeTunnel(id: string) {
 onMounted(async () => {
   await getTunnels();
 });
-
 </script>
 
 <template>
@@ -57,9 +61,15 @@ onMounted(async () => {
   </div>
 
   <div class="mx-2 my-3">
-    <el-table :data="tunnels" stripe class="">
+    <el-table :data="tunnels" stripe>
       <!-- <el-table-column prop="id" label="id" /> -->
-      <el-table-column prop="url" label="url" />
+      <el-table-column prop="url" label="url">
+        <template #default="scope">
+          <el-link type="primary" @click="openUrl(scope.row.url)">
+            {{ scope.row.url }}
+          </el-link>
+        </template>
+      </el-table-column>
       <el-table-column align="right">
         <template #default="scope">
           <el-button

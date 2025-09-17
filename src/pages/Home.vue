@@ -1,47 +1,21 @@
 <script setup lang="ts">
 import { Plus } from "@element-plus/icons-vue";
-import { onMounted, ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { onMounted } from "vue";
+import { openSession } from "@/services/session";
 import { useRouter } from "vue-router";
-import { openSession } from '@/services/session';
 
-const greetMsg = ref("");
-const name = ref("");
 const router = useRouter();
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
-}
-
 onMounted(async () => {
-  openSession()
-    .catch(() => {
-      console.log('No session');
-      router.push({ name: 'open-session' });
-    })
+  openSession().catch(() => {
+    console.log("No session");
+    router.push({ name: "open-session" });
+  });
 });
 </script>
 
 <template>
   <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
-
-    <p>
-      <el-text class="mx-1"
-        >Click on the Tauri, Vite, and Vue logos to learn more.</el-text
-      >
-    </p>
-
-    <div class="row">
-      <el-input
-        v-model="name"
-        style="width: 240px"
-        placeholder="Enter a name.."
-      />
-      <el-button @click="greet">Greet 👋</el-button>
-    </div>
-    <p>{{ greetMsg }}</p>
     <div class="row">
       <el-button
         size="large"
