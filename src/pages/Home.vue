@@ -15,8 +15,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="container">
-    <div class="row">
+  <div class="w-full flex items-center justify-center h-screen">
+    <div
+      class="w-1/3 h-1/6 flex flex-col justify-center items-center content-center"
+    >
       <el-button
         size="large"
         :icon="Plus"
@@ -29,5 +31,5 @@ onMounted(async () => {
         >Open your first tunnel 🚀</el-button
       >
     </div>
-  </main>
+  </div>
 </template>

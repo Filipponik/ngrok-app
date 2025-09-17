@@ -12,7 +12,7 @@ import { ArrowLeft } from "@element-plus/icons-vue";
       plain
       :to="{ name: 'tunnel-list' }"
       class="m-5"
-      >Back</el-button
+      >Back to tunnel list</el-button
     >
   </div>
   <CreateTunnel />
