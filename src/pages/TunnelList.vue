@@ -4,12 +4,13 @@ import {
   getTunnels as getTunnelsFromApi,
   type Tunnel,
 } from "@/services/tunnel";
-import { ArrowLeft, Close, CopyDocument, Plus } from "@element-plus/icons-vue";
-import { onMounted, ref } from "vue";
+import { Check, Close, CopyDocument, Plus } from "@element-plus/icons-vue";
+import { onMounted, reactive, ref } from "vue";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openPath } from "@tauri-apps/plugin-opener";
 
 const tunnels = ref<Tunnel[]>([]);
+const copyStates = reactive<{ [id: string]: boolean }>({})
 
 async function getTunnels() {
   tunnels.value = await getTunnelsFromApi();
@@ -19,8 +20,13 @@ setTimeout(async () => {
   await getTunnels();
 }, 1000);
 
-async function copyUrl(url: string) {
+async function copyUrl(url: string, id: string) {
   await writeText(url);
+
+  copyStates[id] = true
+  setTimeout(() => {
+    copyStates[id] = false
+  }, 1000)
 }
 
 async function openUrl(url: string) {
@@ -38,16 +44,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex justify-between w-full">
-    <el-button
-      :icon="ArrowLeft"
-      tag="router-link"
-      round
-      plain
-      to="/tunnel/create"
-      class="m-5"
-      >Back</el-button
-    >
+  <div class="flex justify-end w-full">
     <el-button
       :icon="Plus"
       tag="router-link"
@@ -73,11 +70,11 @@ onMounted(async () => {
       <el-table-column align="right">
         <template #default="scope">
           <el-button
-            type="primary"
-            :icon="CopyDocument"
+          :type="copyStates[scope.row.id] ? 'success' : 'primary'"
+          :icon="copyStates[scope.row.id] ? Check : CopyDocument"
             circle
             plain
-            @click="copyUrl(scope.row.url)"
+            @click="copyUrl(scope.row.url, scope.row.id)"
           />
           <el-button
             type="danger"

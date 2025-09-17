@@ -26,7 +26,7 @@ onMounted(async () => {
         type="primary"
         to="/tunnel/create"
         class="m-5"
-        >Create Tunnel</el-button
+        >Open your first tunnel 🚀</el-button
       >
     </div>
   </main>

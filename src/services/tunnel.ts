@@ -12,3 +12,11 @@ export const getTunnels = async (): Promise<Tunnel[]> => {
 export const closeTunnel = async (id: string): Promise<void> => {
   await invoke('tunnel_close', { id });
 }
+
+export const openTunnel = async (port: string, domain?: string, host_rewrite?: string): Promise<void> => {
+  await invoke("tunnel_open", {
+    port: port,
+    domain: domain,
+    hostRewrite: host_rewrite
+  });
+}
