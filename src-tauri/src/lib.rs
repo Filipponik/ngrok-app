@@ -46,10 +46,10 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
 
     ngrok_wrapper::open_tunnel(domain.clone(), command.port, headers, command.basic_auth)
         .await
-        .expect("Failed to create tunnel");
+        .map_err(|e| format!("Failed to create tunnel: {}", e))?;
 
     if let Some(domain) = domain {
-        add_static_domain(&domain).await.unwrap();
+        let _ = add_static_domain(&domain).await;
     }
 
     Ok(())
@@ -108,19 +108,19 @@ async fn open_session(auth_token: Option<&str>) -> Result<(), String> {
     println!("Open session with {token}");
 
     ngrok_wrapper::get_session(token.clone()).await?;
-    set_token(&token).await;
+    set_token(&token).await?;
     Ok(())
 }
 
 async fn get_token() -> Result<String, String> {
     let mut config_file = APP_HANDLE
         .get()
-        .unwrap()
+        .ok_or_else(|| format!("Cannot get app handle"))?
         .lock()
         .await
         .path()
         .app_config_dir()
-        .unwrap();
+        .map_err(|e| format!("Cannot get app config dir: {}", e))?;
     config_file.push("token.txt");
 
     let token = tokio::fs::read_to_string(config_file)
@@ -134,20 +134,22 @@ async fn get_token() -> Result<String, String> {
     }
 }
 
-async fn set_token(auth_token: &str) {
+async fn set_token(auth_token: &str) -> Result<(), String> {
     let mut config_file = APP_HANDLE
         .get()
-        .unwrap()
+        .ok_or_else(|| format!("Cannot get app handle"))?
         .lock()
         .await
         .path()
         .app_config_dir()
-        .unwrap();
+        .map_err(|e| format!("Cannot get app config dir: {}", e))?;
 
     tokio::fs::create_dir_all(&config_file).await.unwrap();
     config_file.push("token.txt");
     let mut file = tokio::fs::File::create(&config_file).await.unwrap();
     file.write_all(auth_token.as_bytes()).await.unwrap();
+
+    Ok(())
 }
 
 async fn add_static_domain(domain: &str) -> Result<(), String> {

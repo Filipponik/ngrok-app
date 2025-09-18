@@ -4,9 +4,10 @@ import { Bottom, Plus, Top } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
 import { openTunnel } from "@/services/tunnel";
 import { invoke } from "@tauri-apps/api/core";
+import { showError } from "@/services/message";
 
 const advanced = ref(false);
-const port = ref("");
+const port = ref(80);
 const domain = ref("");
 const host_rewrite = ref("");
 const username = ref("");
@@ -15,23 +16,27 @@ const router = useRouter();
 const staticDomains = ref<string[]>([]);
 
 async function createTunnel() {
-  if (!advanced.value) {
-    await openTunnel({ port: port.value });
-  } else {
-    await openTunnel({
-      port: port.value,
-      domain: domain.value,
-      host_rewrite: host_rewrite.value,
-      basic_auth:
-        username.value && password.value
-          ? {
+  try {
+    if (!advanced.value) {
+      await openTunnel({ port: port.value.toString() });
+    } else {
+      await openTunnel({
+        port: port.value.toString(),
+        domain: domain.value,
+        host_rewrite: host_rewrite.value,
+        basic_auth:
+          username.value && password.value
+            ? {
               username: username.value,
               password: password.value,
             }
-          : undefined,
-    });
+            : undefined,
+      });
+    }
+    router.push({ name: "tunnel-list" });
+  } catch (error: any) {
+    showError(error);
   }
-  router.push({ name: "tunnel-list" });
 }
 
 async function getStaticDomains(): Promise<string[]> {
@@ -51,7 +56,13 @@ onMounted(async () => {
       <h1 class="text-center text-large font-600 font-bold mb-4">
         Create Tunnel
       </h1>
-      <el-input class="mb-1" type="number" v-model="port" placeholder="Port" />
+      <el-input-number
+        max="65535"
+        min="0"
+        class="mb-1"
+        v-model="port"
+        placeholder="Port"
+      />
       <el-button
         class="my-3"
         :icon="advanced ? Top : Bottom"
@@ -102,9 +113,9 @@ onMounted(async () => {
           <el-input
             class="mb-1"
             type="password"
+            show-password
             v-model="password"
             placeholder="Password"
-            show-password
           />
         </div>
       </el-collapse-transition>

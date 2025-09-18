@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { openSession } from "@/services/session";
 import { useRouter } from "vue-router";
+import { showError } from "@/services/message";
 
 const token = ref("");
 const router = useRouter();
@@ -13,7 +14,8 @@ async function handleOpenSession() {
       console.log("Session opened successfully");
       router.push({ name: "home" });
     })
-    .catch(() => {
+    .catch((err) => {
+      showError(err);
       console.log("Failed to open session");
     });
 }
@@ -29,7 +31,8 @@ async function handleOpenSession() {
       </div>
       <el-text>Please enter your Ngrok API Token</el-text>
       <el-input
-        type="text"
+        type="password"
+        show-password
         class="my-3"
         v-model="token"
         placeholder="Ngrok API Token"
