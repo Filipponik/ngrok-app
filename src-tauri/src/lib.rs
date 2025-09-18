@@ -68,6 +68,7 @@ struct TunnelResponse {
     port: String,
     is_static_domain: bool,
     headers: Vec<Header>,
+    basic_auth: Option<BasicAuth>,
 }
 
 #[tauri::command]
@@ -83,6 +84,7 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
                 port: tunnel.port.clone(),
                 is_static_domain: tunnel.is_static_domain,
                 headers: tunnel.request_headers.clone(),
+                basic_auth: tunnel.basic_auth.clone(),
             }
         })
         .collect()

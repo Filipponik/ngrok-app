@@ -36,6 +36,7 @@ pub struct TunnelOpened {
     pub port: String,
     pub is_static_domain: bool,
     pub request_headers: Vec<Header>,
+    pub basic_auth: Option<BasicAuth>,
     #[serde(skip)]
     inner: Forwarder<HttpTunnel>,
 }
@@ -60,7 +61,7 @@ pub async fn open_tunnel(
         tunnel_builder.request_header(header.name.clone(), header.value.clone());
     }
 
-    if let Some(basic_auth) = basic_auth {
+    if let Some(basic_auth) = basic_auth.clone() {
         tunnel_builder.basic_auth(basic_auth.username.clone(), basic_auth.password.clone());
     }
 
@@ -78,6 +79,7 @@ pub async fn open_tunnel(
         port,
         is_static_domain: domain.is_some(),
         request_headers: headers,
+        basic_auth: basic_auth,
         inner: tunnel,
     };
 
