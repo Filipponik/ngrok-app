@@ -8,6 +8,7 @@
     "opener:default",
     "clipboard-manager:default",
     "clipboard-manager:allow-write-text",
+    "core:webview:allow-webview-hide",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "**" }]

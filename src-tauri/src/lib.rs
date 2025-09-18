@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::{
+    AppHandle, Manager, WebviewWindow, Window,
+    tray::{MouseButton, MouseButtonState, TrayIconEvent},
+};
 use tokio::{
     io::AsyncWriteExt,
     sync::{Mutex, OnceCell},
@@ -12,11 +15,18 @@ mod ngrok_wrapper;
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct BasicAuth {
+    username: String,
+    password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct TunnelOpen {
     port: String,
     domain: Option<String>,
     host_rewrite: Option<String>,
     headers: Vec<Header>,
+    basic_auth: Option<BasicAuth>,
 }
 
 #[tauri::command]
@@ -35,7 +45,7 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
         headers.push(Header::new_host_rewrite(host));
     }
 
-    ngrok_wrapper::open_tunnel(domain, command.port, headers)
+    ngrok_wrapper::open_tunnel(domain, command.port, headers, command.basic_auth)
         .await
         .expect("Failed to create tunnel");
 
@@ -140,6 +150,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_prevent_default::init())
         .invoke_handler(tauri::generate_handler![
             tunnel_open,
             tunnel_close,
@@ -147,9 +158,111 @@ pub fn run() {
             tunnel_list,
         ])
         .setup(|app: &mut tauri::App| {
+            #[cfg(debug_assertions)]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
+            }
+
+            let _tray = tauri::tray::TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_visible().is_ok_and(|v| v) {
+                                hide_window_to_tray(app);
+                            } else {
+                                show_window_from_tray(app);
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
             APP_HANDLE.set(Mutex::new(app.handle().clone())).unwrap();
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide_to_tray();
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+trait HideToTray {
+    fn hide_to_tray(&self);
+    fn show_from_tray(&self);
+}
+
+impl HideToTray for WebviewWindow {
+    fn hide_to_tray(&self) {
+        let _ = self.hide();
+
+        #[cfg(target_os = "macos")]
+        {
+            let _ = self
+                .app_handle()
+                .set_activation_policy(tauri::ActivationPolicy::Accessory);
+        }
+    }
+    fn show_from_tray(&self) {
+        #[cfg(target_os = "macos")]
+        {
+            let _ = self
+                .app_handle()
+                .set_activation_policy(tauri::ActivationPolicy::Regular);
+        }
+
+        let _ = self.unminimize();
+        let _ = self.show();
+        let _ = self.set_focus();
+    }
+}
+
+impl HideToTray for Window {
+    fn hide_to_tray(&self) {
+        let _ = self.hide();
+
+        #[cfg(target_os = "macos")]
+        {
+            let _ = self
+                .app_handle()
+                .set_activation_policy(tauri::ActivationPolicy::Accessory);
+        }
+    }
+    fn show_from_tray(&self) {
+        #[cfg(target_os = "macos")]
+        {
+            let _ = self
+                .app_handle()
+                .set_activation_policy(tauri::ActivationPolicy::Regular);
+        }
+
+        let _ = self.unminimize();
+        let _ = self.show();
+        let _ = self.set_focus();
+    }
+}
+
+fn hide_window_to_tray(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide_to_tray();
+    }
+}
+
+fn show_window_from_tray(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        window.show_from_tray();
+    }
 }

@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
 use url::Url;
 
+use crate::BasicAuth;
+
 static TUNNELS: OnceCell<DashMap<String, TunnelOpened>> = OnceCell::const_new();
 static SESSION: OnceCell<Session> = OnceCell::const_new();
 
@@ -42,6 +44,7 @@ pub async fn open_tunnel(
     domain: Option<impl Into<String>>,
     port: impl Into<String>,
     headers: Vec<Header>,
+    basic_auth: Option<BasicAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = port.into();
     let domain: Option<String> = domain.and_then(|domain| Some(domain.into()));
@@ -55,6 +58,10 @@ pub async fn open_tunnel(
 
     for header in &headers {
         tunnel_builder.request_header(header.name.clone(), header.value.clone());
+    }
+
+    if let Some(basic_auth) = basic_auth {
+        tunnel_builder.basic_auth(basic_auth.username.clone(), basic_auth.password.clone());
     }
 
     // Forward HTTP traffic from ngrok to the local server
