@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { Bottom, Plus, Top } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
 import { openTunnel } from "@/services/tunnel";
+import { invoke } from "@tauri-apps/api/core";
 
 const advanced = ref(false);
 const port = ref("");
@@ -11,6 +12,7 @@ const host_rewrite = ref("");
 const username = ref("");
 const password = ref("");
 const router = useRouter();
+const staticDomains = ref<string[]>([]);
 
 async function createTunnel() {
   if (!advanced.value) {
@@ -20,16 +22,25 @@ async function createTunnel() {
       port: port.value,
       domain: domain.value,
       host_rewrite: host_rewrite.value,
-      basic_auth: username.value && password.value
-        ? {
-            username: username.value,
-            password: password.value,
-          }
-        : undefined,
+      basic_auth:
+        username.value && password.value
+          ? {
+              username: username.value,
+              password: password.value,
+            }
+          : undefined,
     });
   }
   router.push({ name: "tunnel-list" });
 }
+
+async function getStaticDomains(): Promise<string[]> {
+  return await invoke("get_static_domains");
+}
+
+onMounted(async () => {
+  staticDomains.value = await getStaticDomains();
+});
 </script>
 
 <template>
@@ -52,38 +63,51 @@ async function createTunnel() {
           advanced ? "Hide advanced options" : "Show advanced options"
         }}</el-button
       >
-      <div v-show="advanced">
-        <el-input
-          class="mb-1"
-          type="text"
-          v-model="domain"
-          placeholder="Domain (optional)"
-        >
-          <template #prepend>https://</template>
-        </el-input>
-        <el-input
-          class="mb-1"
-          type="text"
-          v-model="host_rewrite"
-          placeholder="Host Rewrite (optional)"
-        >
-          <template #prepend>https://</template>
-        </el-input>
-        <el-divider />
-        <el-text>Basic Authentication</el-text>
-        <el-input
-          class="mb-1"
-          type="text"
-          v-model="username"
-          placeholder="Username"
-        />
-        <el-input
-          class="mb-1"
-          type="password"
-          v-model="password"
-          placeholder="Password"
-        />
-      </div>
+
+      <el-collapse-transition>
+        <div v-show="advanced">
+          <el-select
+            v-model="domain"
+            filterable
+            allow-create
+            default-first-option
+            placeholder="Domain (optional)"
+            :reserve-keyword="false"
+            class="mb-1"
+          >
+            <template #prefix>https://</template>
+            <el-option
+              v-for="item in staticDomains"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
+          </el-select>
+          <el-input
+            class="mb-1"
+            type="text"
+            v-model="host_rewrite"
+            placeholder=" Host Rewrite (optional)"
+          >
+            <template #prefix>https://</template>
+          </el-input>
+          <el-divider />
+          <el-text>Basic Authentication</el-text>
+          <el-input
+            class="mb-1"
+            type="text"
+            v-model="username"
+            placeholder="Username"
+          />
+          <el-input
+            class="mb-1"
+            type="password"
+            v-model="password"
+            placeholder="Password"
+            show-password
+          />
+        </div>
+      </el-collapse-transition>
       <el-button
         class="my-4 w-full"
         type="primary"

@@ -33,7 +33,6 @@ struct TunnelOpen {
 async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
     let domain = command
         .domain
-        .clone()
         .and_then(|d| if d.is_empty() { None } else { Some(d) });
     let host_rewrite = command
         .host_rewrite
@@ -45,9 +44,13 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
         headers.push(Header::new_host_rewrite(host));
     }
 
-    ngrok_wrapper::open_tunnel(domain, command.port, headers, command.basic_auth)
+    ngrok_wrapper::open_tunnel(domain.clone(), command.port, headers, command.basic_auth)
         .await
         .expect("Failed to create tunnel");
+
+    if let Some(domain) = domain {
+        add_static_domain(&domain).await.unwrap();
+    }
 
     Ok(())
 }
@@ -147,6 +150,49 @@ async fn set_token(auth_token: &str) {
     file.write_all(auth_token.as_bytes()).await.unwrap();
 }
 
+async fn add_static_domain(domain: &str) -> Result<(), String> {
+    let mut static_domains_file = APP_HANDLE
+        .get()
+        .unwrap()
+        .lock()
+        .await
+        .path()
+        .app_config_dir()
+        .unwrap();
+
+    tokio::fs::create_dir_all(&static_domains_file)
+        .await
+        .unwrap();
+    static_domains_file.push("static_domains.txt");
+    let mut file = tokio::fs::File::create(&static_domains_file).await.unwrap();
+    file.write_all(domain.as_bytes()).await.unwrap();
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_static_domains() -> Result<Vec<String>, String> {
+    let mut static_domains_file = APP_HANDLE
+        .get()
+        .unwrap()
+        .lock()
+        .await
+        .path()
+        .app_config_dir()
+        .unwrap();
+    static_domains_file.push("static_domains.txt");
+
+    let domains = tokio::fs::read_to_string(static_domains_file)
+        .await
+        .map_err(|e| format!("Cannot read file {e:?}"))?
+        .split('\n')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+
+    Ok(domains)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -158,6 +204,7 @@ pub fn run() {
             tunnel_close,
             open_session,
             tunnel_list,
+            get_static_domains,
         ])
         .setup(|app: &mut tauri::App| {
             #[cfg(debug_assertions)]
