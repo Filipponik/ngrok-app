@@ -8,6 +8,8 @@ const advanced = ref(false);
 const port = ref("");
 const domain = ref("");
 const host_rewrite = ref("");
+const username = ref("");
+const password = ref("");
 const router = useRouter();
 
 async function createTunnel() {
@@ -18,6 +20,12 @@ async function createTunnel() {
       port: port.value,
       domain: domain.value,
       host_rewrite: host_rewrite.value,
+      basic_auth: username.value && password.value
+        ? {
+            username: username.value,
+            password: password.value,
+          }
+        : undefined,
     });
   }
   router.push({ name: "tunnel-list" });
@@ -61,6 +69,20 @@ async function createTunnel() {
         >
           <template #prepend>https://</template>
         </el-input>
+        <el-divider />
+        <el-text>Basic Authentication</el-text>
+        <el-input
+          class="mb-1"
+          type="text"
+          v-model="username"
+          placeholder="Username"
+        />
+        <el-input
+          class="mb-1"
+          type="password"
+          v-model="password"
+          placeholder="Password"
+        />
       </div>
       <el-button
         class="my-4 w-full"

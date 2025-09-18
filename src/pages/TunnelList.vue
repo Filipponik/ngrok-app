@@ -85,6 +85,11 @@ onMounted(async () => {
               type="primary"
               >Host rewrite</el-tag
             >
+            <el-tag
+              v-if="scope.row.basic_auth"
+              type="primary"
+              >Basic auth</el-tag
+            >
           </div>
         </template>
       </el-table-column>
