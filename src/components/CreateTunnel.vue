@@ -14,9 +14,11 @@ const username = ref("");
 const password = ref("");
 const router = useRouter();
 const staticDomains = ref<string[]>([]);
+const isLoading = ref(false);
 
 async function createTunnel() {
   try {
+    isLoading.value = true;
     if (!advanced.value) {
       await openTunnel({ port: port.value.toString() });
     } else {
@@ -36,6 +38,8 @@ async function createTunnel() {
     router.push({ name: "tunnel-list" });
   } catch (error: any) {
     showError(error);
+  } finally {
+    isLoading.value = false;
   }
 }
 
@@ -126,6 +130,7 @@ onMounted(async () => {
         :icon="Plus"
         round
         @click="createTunnel"
+        :loading="isLoading"
         >Create</el-button
       >
     </div>

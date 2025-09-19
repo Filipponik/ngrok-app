@@ -70,7 +70,7 @@ struct TunnelResponse {
     url: String,
     port: String,
     is_static_domain: bool,
-    headers: Vec<Header>,
+    request_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
 }
 
@@ -86,7 +86,7 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
                 url: tunnel.url.clone(),
                 port: tunnel.port.clone(),
                 is_static_domain: tunnel.is_static_domain,
-                headers: tunnel.request_headers.clone(),
+                request_headers: tunnel.request_headers.clone(),
                 basic_auth: tunnel.basic_auth.clone(),
             }
         })
