@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import TunnelListActionButtons from "@/components/TunnelListActionButtons.vue";
 import TunnelListTags from "@/components/TunnelListTags.vue";
+import type { Tunnel } from "@/services/tunnel";
+import { openPath } from "@tauri-apps/plugin-opener";
 interface Props {
   tunnels: Tunnel[];
 }
 
 const emit = defineEmits(["tunnelClosed"]);
 const props = defineProps<Props>();
-
-async function openUrl(url: string) {
-  await openPath(url);
-}
 </script>
 
 <template>
@@ -19,7 +17,7 @@ async function openUrl(url: string) {
       <template #default="scope">
         <el-link
           type="primary"
-          @click="openUrl(`http://localhost:${scope.row.port}`)"
+          @click="openPath(`http://localhost:${scope.row.port}`)"
         >
           {{ scope.row.port }}
         </el-link>
@@ -28,7 +26,7 @@ async function openUrl(url: string) {
 
     <el-table-column prop="url" label="url">
       <template #default="scope">
-        <el-link type="primary" @click="openUrl(scope.row.url)">
+        <el-link type="primary" @click="openPath(scope.row.url)">
           {{ scope.row.url.replace("https://", "") }}
         </el-link>
       </template>

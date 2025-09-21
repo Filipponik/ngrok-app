@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { openSession } from "@/services/session";
 import { useRouter } from "vue-router";
 import { showError } from "@/services/message";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 const token = ref("");
 const router = useRouter();
@@ -29,7 +30,16 @@ async function handleOpenSession() {
       <div class="my-2">
         <el-text bold tag="b" size="large">Welcome to Ngrok App!</el-text>
       </div>
-      <el-text>Please enter your Ngrok API Token</el-text>
+      <el-row class="flex gap-1">
+        <el-text>Please enter your </el-text>
+        <el-link
+          type="primary"
+          @click="
+            openPath('https://dashboard.ngrok.com/get-started/your-authtoken')
+          "
+          >Ngrok API Token</el-link
+        >
+      </el-row>
       <el-input
         type="password"
         show-password
