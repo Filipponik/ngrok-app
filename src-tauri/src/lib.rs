@@ -11,6 +11,7 @@ use tokio::{
 use crate::ngrok_wrapper::Header;
 
 mod ngrok_wrapper;
+mod proxy;
 
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
 
@@ -236,11 +237,12 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
                 let _ = window.hide_to_tray();
             }
+            _ => {}
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

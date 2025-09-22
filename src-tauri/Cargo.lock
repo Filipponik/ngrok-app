@@ -2666,6 +2666,7 @@ dependencies = [
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-opener",
  "tauri-plugin-prevent-default",
+ "thiserror 2.0.16",
  "tokio",
  "url",
 ]
