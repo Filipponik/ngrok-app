@@ -59,7 +59,7 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
 async fn tunnel_close(id: &str) -> Result<(), String> {
     ngrok_wrapper::close_tunnel(id)
         .await
-        .expect("Failed to create tunnel");
+        .map_err(|e| format!("Failed to close tunnel: {}", e))?;
 
     Ok(())
 }
@@ -95,14 +95,9 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
 
 #[tauri::command]
 async fn open_session(auth_token: Option<&str>) -> Result<(), String> {
-    let token = if let Some(input_token) = auth_token {
-        input_token.to_string()
-    } else {
-        if let Ok(token) = get_token().await {
-            token
-        } else {
-            return Err("No token found".to_string());
-        }
+    let token = match auth_token {
+        Some(input_token) => input_token.to_string(),
+        None => get_token().await.map_err(|_e| format!("No token found"))?,
     };
 
     println!("Open session with {token}");
