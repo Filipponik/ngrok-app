@@ -3,7 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 export interface Tunnel {
   id: string;
   url: string;
-  port: string;
+  local_port: number;
+  proxy_port: number;
   is_static_domain: boolean;
   request_headers: { name: string; value: string }[];
   basic_auth?: { username: string; password: string };

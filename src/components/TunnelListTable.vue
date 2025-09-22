@@ -13,13 +13,13 @@ const props = defineProps<Props>();
 
 <template>
   <el-table :data="props.tunnels" stripe table-layout="auto">
-    <el-table-column prop="port" label="local port">
+    <el-table-column prop="local_port" label="local port">
       <template #default="scope">
         <el-link
           type="primary"
-          @click="openPath(`http://localhost:${scope.row.port}`)"
+          @click="openPath(`http://localhost:${scope.row.local_port}`)"
         >
-          {{ scope.row.port }}
+          {{ scope.row.local_port }}
         </el-link>
       </template>
     </el-table-column>
