@@ -5,7 +5,6 @@ import {
 } from "@/services/tunnel";
 import { Plus } from "@element-plus/icons-vue";
 import { onMounted, ref } from "vue";
-import { openPath } from "@tauri-apps/plugin-opener";
 import TunnelListTable from "@/components/TunnelListTable.vue";
 
 const tunnels = ref<Tunnel[]>([]);
