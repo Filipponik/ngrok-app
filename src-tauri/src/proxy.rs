@@ -18,32 +18,14 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
-pub struct ProxyConfig {
-    pub bind_host: String,
-    pub max_connections: usize,
-    pub connection_timeout: std::time::Duration,
-}
-
-impl Default for ProxyConfig {
-    fn default() -> Self {
-        Self {
-            bind_host: "127.0.0.1".to_string(),
-            max_connections: 1000,
-            connection_timeout: std::time::Duration::from_secs(30),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct ProxyMapping {
     pub source_port: u16,
     pub target_addr: SocketAddr,
-    pub active_connections: usize,
-    pub is_running: bool,
 }
 
 #[async_trait]
 pub trait ProxyManager: Send + Sync {
     async fn add_mapping(&self, target_addr: SocketAddr) -> Result<ProxyMapping>;
     async fn remove_mapping(&self, source_port: u16) -> Result<()>;
+    async fn list_mapping(&self) -> Vec<ProxyMapping>;
 }

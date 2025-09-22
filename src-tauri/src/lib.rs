@@ -1,3 +1,5 @@
+use std::{net::SocketAddr, str::FromStr};
+
 use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, Manager, WebviewWindow, Window,
@@ -8,12 +10,22 @@ use tokio::{
     sync::{Mutex, OnceCell},
 };
 
-use crate::ngrok_wrapper::Header;
+use crate::{
+    ngrok_wrapper::Header,
+    proxy::{ProxyManager, ProxyMapping, proxy_impl::ProxyManagerImpl},
+};
 
 mod ngrok_wrapper;
 mod proxy;
 
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
+pub static PROXY_MANAGER: OnceCell<ProxyManagerImpl> = OnceCell::const_new();
+
+pub async fn get_proxy_manager() -> &'static ProxyManagerImpl {
+    PROXY_MANAGER
+        .get_or_init(|| async { ProxyManagerImpl::new() })
+        .await
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct BasicAuth {
@@ -45,9 +57,21 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
         headers.push(Header::new_host_rewrite(host));
     }
 
-    ngrok_wrapper::open_tunnel(domain.clone(), command.port, headers, command.basic_auth)
+    let mapping: ProxyMapping = get_proxy_manager()
         .await
-        .map_err(|e| format!("Failed to create tunnel: {}", e))?;
+        .add_mapping(SocketAddr::from_str(&format!("0.0.0.0:{}", command.port)).unwrap())
+        .await
+        .map_err(|e| format!("Failed to add mapping: {}", e))?;
+    let proxy_port = mapping.source_port;
+
+    ngrok_wrapper::open_tunnel(
+        domain.clone(),
+        proxy_port.to_string(),
+        headers,
+        command.basic_auth,
+    )
+    .await
+    .map_err(|e| format!("Failed to create tunnel: {}", e))?;
 
     if let Some(domain) = domain {
         let _ = add_static_domain(&domain).await;
@@ -58,7 +82,22 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
 
 #[tauri::command]
 async fn tunnel_close(id: &str) -> Result<(), String> {
+    let tunnel_port: u16 = ngrok_wrapper::get_tunnels()
+        .await
+        .iter()
+        .find(|tunnel| tunnel.value().id == id)
+        .ok_or(format!("Failed to find tunnel: {}", id))?
+        .port
+        .parse()
+        .map_err(|e| format!("Failed to parse port: {}", e))?;
+
     ngrok_wrapper::close_tunnel(id)
+        .await
+        .map_err(|e| format!("Failed to close tunnel: {}", e))?;
+
+    get_proxy_manager()
+        .await
+        .remove_mapping(tunnel_port)
         .await
         .map_err(|e| format!("Failed to close tunnel: {}", e))?;
 
@@ -69,7 +108,8 @@ async fn tunnel_close(id: &str) -> Result<(), String> {
 struct TunnelResponse {
     id: String,
     url: String,
-    port: String,
+    local_port: u16,
+    proxy_port: u16,
     is_static_domain: bool,
     request_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
@@ -77,15 +117,26 @@ struct TunnelResponse {
 
 #[tauri::command]
 async fn tunnel_list() -> Vec<TunnelResponse> {
+    let mappings = get_proxy_manager().await.list_mapping().await;
+
     ngrok_wrapper::get_tunnels()
         .await
         .into_iter()
         .map(|tunnel| {
+            let proxy_port: u16 = tunnel.port.clone().parse().unwrap();
             let tunnel = tunnel.value();
+            let local_port = mappings
+                .iter()
+                .find(|mapping| mapping.source_port == proxy_port)
+                .unwrap()
+                .target_addr
+                .port();
+
             TunnelResponse {
                 id: tunnel.id.clone(),
                 url: tunnel.url.clone(),
-                port: tunnel.port.clone(),
+                local_port: local_port,
+                proxy_port: proxy_port,
                 is_static_domain: tunnel.is_static_domain,
                 request_headers: tunnel.request_headers.clone(),
                 basic_auth: tunnel.basic_auth.clone(),

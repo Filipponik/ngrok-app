@@ -3,10 +3,10 @@ use dashmap::DashMap;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{net::TcpListener, sync::broadcast};
 
-use crate::proxy::{Error, ProxyConfig, ProxyManager, ProxyMapping, Result};
+use crate::proxy::{Error, ProxyManager, ProxyMapping, Result};
 
+#[derive(Debug, Clone)]
 pub struct ProxyManagerImpl {
-    config: ProxyConfig,
     mappings: Arc<DashMap<u16, ProxyMappingInternal>>,
     control_tx: broadcast::Sender<ControlMessage>,
 }
@@ -19,14 +19,12 @@ enum ControlMessage {
 #[derive(Debug)]
 struct ProxyMappingInternal {
     target_addr: SocketAddr,
-    is_running: bool,
 }
 
 impl ProxyManagerImpl {
-    pub fn new(config: ProxyConfig) -> Self {
+    pub fn new() -> Self {
         let (control_tx, _) = broadcast::channel(100);
         Self {
-            config,
             mappings: Arc::new(DashMap::new()),
             control_tx,
         }
@@ -47,7 +45,13 @@ impl ProxyManagerImpl {
                         eprintln!("Proxy error: {}", e);
                     }
                 },
-                _ = shutdown_rx.recv() => {
+                _ = async {
+                    while let Ok(ControlMessage::StopProxy(p)) = shutdown_rx.recv().await {
+                        if port == p {
+                            break;
+                        }
+                    }
+                } => {
                     println!("Proxy listener stopped");
                 }
             }
@@ -61,6 +65,7 @@ impl ProxyManagerImpl {
         target_addr: SocketAddr,
         control_tx: broadcast::Sender<ControlMessage>,
     ) -> Result<()> {
+        let port: u16 = listener.local_addr()?.port();
         while let Ok((inbound, _)) = listener.accept().await {
             let control_tx = control_tx.clone();
             let target_addr = target_addr;
@@ -68,7 +73,7 @@ impl ProxyManagerImpl {
             tokio::spawn(async move {
                 println!("Proxy started");
                 if let Err(e) =
-                    Self::handle_proxy_connection(inbound, target_addr, control_tx).await
+                    Self::handle_proxy_connection(port, inbound, target_addr, control_tx).await
                 {
                     eprintln!("Proxy error: {}", e);
                 }
@@ -78,8 +83,7 @@ impl ProxyManagerImpl {
     }
 
     async fn bind_random_port(&self) -> Result<(TcpListener, u16)> {
-        let bind_addr = format!("{}:0", self.config.bind_host);
-        let listener = TcpListener::bind(&bind_addr)
+        let listener = TcpListener::bind("0.0.0.0:0")
             .await
             .map_err(|_| Error::PortUnavailable(0))?;
 
@@ -92,6 +96,7 @@ impl ProxyManagerImpl {
     }
 
     async fn handle_proxy_connection(
+        port: u16,
         inbound: tokio::net::TcpStream,
         target_addr: SocketAddr,
         control_tx: broadcast::Sender<ControlMessage>,
@@ -104,7 +109,13 @@ impl ProxyManagerImpl {
             result = tokio::io::copy_bidirectional(&mut inbound, &mut outbound) => {
                 result?;
             },
-            _ = shutdown_rx.recv() => {
+            _ = async {
+                while let Ok(ControlMessage::StopProxy(p)) = shutdown_rx.recv().await {
+                    if port == p {
+                        break;
+                    }
+                }
+            } => {
                 println!("Proxy connection stopped");
             }
         }
@@ -120,18 +131,13 @@ impl ProxyManager for ProxyManagerImpl {
             .start_proxy_listener_on_random_port(target_addr)
             .await?;
 
-        let mapping_internal = ProxyMappingInternal {
-            target_addr,
-            is_running: true,
-        };
+        let mapping_internal = ProxyMappingInternal { target_addr };
 
         self.mappings.insert(port, mapping_internal);
 
         Ok(ProxyMapping {
             source_port: port,
             target_addr,
-            active_connections: 0,
-            is_running: true,
         })
     }
 
@@ -143,5 +149,15 @@ impl ProxyManager for ProxyManagerImpl {
         // Удаляем из мапы после отправки сигнала
         self.mappings.remove(&source_port);
         Ok(())
+    }
+
+    async fn list_mapping(&self) -> Vec<ProxyMapping> {
+        self.mappings
+            .iter()
+            .map(|item| ProxyMapping {
+                source_port: *item.key(),
+                target_addr: item.value().target_addr,
+            })
+            .collect()
     }
 }
