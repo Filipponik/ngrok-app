@@ -33,7 +33,7 @@ impl TcpProxyManager {
     async fn start_proxy_listener_on_random_port(&self, target_addr: SocketAddr) -> Result<u16> {
         let (listener, port) = self.bind_random_port().await?;
 
-        // Клонируем только то, что нужно ДО создания таска
+        // Clone only what we need BEFORE creating the task
         let control_tx = self.control_tx.clone();
 
         tokio::spawn(async move {
@@ -146,7 +146,7 @@ impl ProxyManager for TcpProxyManager {
             .send(ControlMessage::StopProxy(source_port))
             .map_err(|_| Error::PortNotFound(source_port))?;
 
-        // Удаляем из мапы после отправки сигнала
+        // Remove from map after sending signal
         self.mappings.remove(&source_port);
         Ok(())
     }
