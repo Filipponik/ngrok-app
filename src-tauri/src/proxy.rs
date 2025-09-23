@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::net::SocketAddr;
 
-pub mod proxy_impl;
+pub mod tcp;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

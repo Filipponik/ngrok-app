@@ -6,7 +6,7 @@ use tokio::{net::TcpListener, sync::broadcast};
 use crate::proxy::{Error, ProxyManager, ProxyMapping, Result};
 
 #[derive(Debug, Clone)]
-pub struct ProxyManagerImpl {
+pub struct TcpProxyManager {
     mappings: Arc<DashMap<u16, ProxyMappingInternal>>,
     control_tx: broadcast::Sender<ControlMessage>,
 }
@@ -21,7 +21,7 @@ struct ProxyMappingInternal {
     target_addr: SocketAddr,
 }
 
-impl ProxyManagerImpl {
+impl TcpProxyManager {
     pub fn new() -> Self {
         let (control_tx, _) = broadcast::channel(100);
         Self {
@@ -125,7 +125,7 @@ impl ProxyManagerImpl {
 }
 
 #[async_trait]
-impl ProxyManager for ProxyManagerImpl {
+impl ProxyManager for TcpProxyManager {
     async fn add_mapping(&self, target_addr: SocketAddr) -> Result<ProxyMapping> {
         let port = self
             .start_proxy_listener_on_random_port(target_addr)
