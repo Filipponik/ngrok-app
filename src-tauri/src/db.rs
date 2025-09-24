@@ -159,26 +159,3 @@ async fn save_all_static_domains(domains: HashSet<String>) -> DbResult<()> {
 
     Ok(())
 }
-
-/// Remove a static domain from the database
-pub async fn remove_static_domain(domain: &str) -> DbResult<bool> {
-    let mut domains = get_static_domains().await?;
-
-    let was_removed = domains.remove(domain);
-    if was_removed {
-        save_all_static_domains(domains).await?;
-    }
-
-    Ok(was_removed)
-}
-
-/// Check if a domain exists in the static domains
-pub async fn has_static_domain(domain: &str) -> DbResult<bool> {
-    let domains = get_static_domains().await?;
-    Ok(domains.contains(domain))
-}
-
-/// Clear all static domains
-pub async fn clear_static_domains() -> DbResult<()> {
-    save_all_static_domains(HashSet::new()).await
-}
