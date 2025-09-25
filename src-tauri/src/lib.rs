@@ -33,7 +33,8 @@ struct TunnelOpen {
     port: String,
     domain: Option<String>,
     host_rewrite: Option<String>,
-    headers: Vec<Header>,
+    request_headers: Vec<Header>,
+    response_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
 }
 
@@ -47,9 +48,9 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
         .clone()
         .and_then(|h| if h.is_empty() { None } else { Some(h) });
 
-    let mut headers = command.headers;
+    let mut request_headers = command.request_headers;
     if let Some(host) = host_rewrite {
-        headers.push(Header::new_host_rewrite(host));
+        request_headers.push(Header::new_host_rewrite(host));
     }
 
     let mapping: ProxyMapping = get_proxy_manager()
@@ -62,7 +63,8 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
     ngrok_wrapper::open_tunnel(
         domain.clone(),
         proxy_port.to_string(),
-        headers,
+        request_headers,
+        command.response_headers,
         command.basic_auth,
     )
     .await
@@ -107,6 +109,7 @@ struct TunnelResponse {
     proxy_port: u16,
     is_static_domain: bool,
     request_headers: Vec<Header>,
+    response_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
 }
 
@@ -134,6 +137,7 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
                 proxy_port: proxy_port,
                 is_static_domain: tunnel.is_static_domain,
                 request_headers: tunnel.request_headers.clone(),
+                response_headers: tunnel.response_headers.clone(),
                 basic_auth: tunnel.basic_auth.clone(),
             }
         })

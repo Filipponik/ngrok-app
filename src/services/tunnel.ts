@@ -7,6 +7,7 @@ export interface Tunnel {
   proxy_port: number;
   is_static_domain: boolean;
   request_headers: { name: string; value: string }[];
+  response_headers: { name: string; value: string }[];
   basic_auth?: { username: string; password: string };
 }
 
@@ -14,7 +15,8 @@ export type TunnelOpen = {
   port: string;
   domain?: string;
   host_rewrite?: string;
-  headers?: { name: string; value: string }[];
+  request_headers?: { name: string; value: string }[];
+  response_headers?: { name: string; value: string }[];
   basic_auth?: { username: string; password: string };
 };
 
@@ -32,7 +34,8 @@ export const openTunnel = async (tunnel: TunnelOpen): Promise<void> => {
       port: tunnel.port,
       domain: tunnel.domain,
       host_rewrite: tunnel.host_rewrite,
-      headers: tunnel.headers ? tunnel.headers : [],
+      request_headers: tunnel.request_headers ? tunnel.request_headers : [],
+      response_headers: tunnel.response_headers ? tunnel.response_headers : [],
       basic_auth: tunnel.basic_auth,
     },
   });

@@ -5,6 +5,7 @@ import { useRouter } from "vue-router";
 import { openTunnel } from "@/services/tunnel";
 import { invoke } from "@tauri-apps/api/core";
 import { showError } from "@/services/message";
+import HeadersEditor, { type Header } from "./HeadersEditor.vue";
 
 const advanced = ref(false);
 const port = ref(80);
@@ -15,6 +16,8 @@ const password = ref("");
 const router = useRouter();
 const staticDomains = ref<string[]>([]);
 const isLoading = ref(false);
+const requestHeaders = ref<Header[]>([]);
+const responseHeaders = ref<Header[]>([]);
 
 async function createTunnel() {
   try {
@@ -26,12 +29,18 @@ async function createTunnel() {
         port: port.value.toString(),
         domain: domain.value,
         host_rewrite: host_rewrite.value,
+        request_headers: requestHeaders.value.filter(
+          (h) => h.name.trim() && h.value.trim(),
+        ),
+        response_headers: responseHeaders.value.filter(
+          (h) => h.name.trim() && h.value.trim(),
+        ),
         basic_auth:
           username.value && password.value
             ? {
-              username: username.value,
-              password: password.value,
-            }
+                username: username.value,
+                password: password.value,
+              }
             : undefined,
       });
     }
@@ -106,6 +115,12 @@ onMounted(async () => {
           >
             <template #prefix>https://</template>
           </el-input>
+          <el-divider />
+          <el-text>Request Headers</el-text>
+          <HeadersEditor v-model="requestHeaders" :max-headers="9" />
+          <el-divider />
+          <el-text>Response Headers</el-text>
+          <HeadersEditor v-model="responseHeaders" :max-headers="9" />
           <el-divider />
           <el-text>Basic Authentication</el-text>
           <el-input

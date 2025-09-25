@@ -36,6 +36,7 @@ pub struct TunnelOpened {
     pub port: String,
     pub is_static_domain: bool,
     pub request_headers: Vec<Header>,
+    pub response_headers: Vec<Header>,
     pub basic_auth: Option<BasicAuth>,
     #[serde(skip)]
     inner: Forwarder<HttpTunnel>,
@@ -44,7 +45,8 @@ pub struct TunnelOpened {
 pub async fn open_tunnel(
     domain: Option<impl Into<String>>,
     port: impl Into<String>,
-    headers: Vec<Header>,
+    request_headers: Vec<Header>,
+    response_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = port.into();
@@ -57,8 +59,12 @@ pub async fn open_tunnel(
         tunnel_builder.domain(domain);
     }
 
-    for header in &headers {
+    for header in &request_headers {
         tunnel_builder.request_header(header.name.clone(), header.value.clone());
+    }
+
+    for header in &response_headers {
+        tunnel_builder.response_header(header.name.clone(), header.value.clone());
     }
 
     if let Some(basic_auth) = basic_auth.clone() {
@@ -78,7 +84,8 @@ pub async fn open_tunnel(
         url: tunnel.url().to_string(),
         port,
         is_static_domain: domain.is_some(),
-        request_headers: headers,
+        request_headers: request_headers,
+        response_headers: response_headers,
         basic_auth: basic_auth,
         inner: tunnel,
     };
