@@ -63,12 +63,11 @@ onMounted(async () => {
 
 <template>
   <div class="w-full h-full flex items-center justify-center">
-    <div
-      class="w-1/3 h-full flex flex-col justify-start items-center content-center min-w-96"
-    >
+    <div class="w-1/3 h-full min-w-96">
       <el-scrollbar class="w-full h-full">
-        <div class="px-6 py-4">
+        <div class="px-6 py-4 flex flex-col items-center">
           <h1 class="text-center text-2xl font-bold mb-6">Create Tunnel</h1>
+
           <el-input-number
             max="65535"
             min="0"
@@ -88,12 +87,15 @@ onMounted(async () => {
 
           <el-collapse-transition>
             <div v-show="advanced" class="w-full">
+              <el-text class="text-sm font-medium text-gray-700"
+                >Domains</el-text
+              >
               <el-select
                 v-model="domain"
                 filterable
                 allow-create
                 default-first-option
-                placeholder="Domain (optional)"
+                placeholder="Domain"
                 :reserve-keyword="false"
                 class="mb-3 w-full"
               >
@@ -105,14 +107,31 @@ onMounted(async () => {
                   :value="item"
                 />
               </el-select>
+
               <el-input
                 class="mb-3 w-full"
                 type="text"
                 v-model="host_rewrite"
-                placeholder=" Host Rewrite (optional)"
+                placeholder="Host Rewrite"
               >
                 <template #prefix>https://</template>
               </el-input>
+
+              <el-divider />
+              <el-text class="text-sm font-medium text-gray-700"
+                >Request Headers</el-text
+              >
+              <div class="mb-4 mt-2 w-full">
+                <HeadersEditor v-model="requestHeaders" :max-headers="9" />
+              </div>
+
+              <el-divider />
+              <el-text class="text-sm font-medium text-gray-700"
+                >Response Headers</el-text
+              >
+              <div class="mb-4 mt-2 w-full">
+                <HeadersEditor v-model="responseHeaders" :max-headers="9" />
+              </div>
 
               <el-divider />
               <el-text class="text-sm font-medium text-gray-700"
@@ -131,23 +150,9 @@ onMounted(async () => {
                 v-model="password"
                 placeholder="Password"
               />
-              <el-divider />
-              <el-text class="text-sm font-medium text-gray-700"
-                >Request Headers</el-text
-              >
-              <div class="mb-4 mt-2">
-                <HeadersEditor v-model="requestHeaders" :max-headers="9" />
-              </div>
-
-              <el-divider />
-              <el-text class="text-sm font-medium text-gray-700"
-                >Response Headers</el-text
-              >
-              <div class="mb-4 mt-2">
-                <HeadersEditor v-model="responseHeaders" :max-headers="9" />
-              </div>
             </div>
           </el-collapse-transition>
+
           <el-button
             class="mt-6 mb-4 w-full"
             type="primary"
