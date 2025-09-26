@@ -38,12 +38,12 @@
 > *Screenshots will be added here*
 
 <div align="center">
-  <img src="img/welcome.png" alt="Main Dashboard" width="45%" />
-  <img src="img/home.png" alt="Tunnel Creation" width="45%" />
+  <img src="img/welcome.png" alt="Welcome Page" width="45%" />
+  <img src="img/home.png" alt="Home" width="45%" />
 </div>
 
 <div align="center">
-  <img src="img/create_tinnel.png" alt="Advanced Settings" width="45%" />
+  <img src="img/create_tunnel.png" alt="Tunnel Creation" width="45%" />
   <img src="img/list_tunnels.png" alt="Tunnel Management" width="45%" />
 </div>
 
