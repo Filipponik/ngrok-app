@@ -91,7 +91,7 @@ onMounted(async () => {
               <el-text class="text-sm font-medium text-gray-700"
                 >Domains</el-text
               >
-              <div class="flex gap-2">
+              <div class="flex">
                 <el-select
                   v-model="domain"
                   filterable
@@ -121,9 +121,7 @@ onMounted(async () => {
                       </el-link>
                     </div>
                   </template>
-                  <el-icon color="#999999" size="15" class="my-2">
-                    <QuestionFilled />
-                  </el-icon>
+                  <el-button circle round text :icon="QuestionFilled" />
                 </el-tooltip>
               </div>
               <el-input
