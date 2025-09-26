@@ -2,7 +2,7 @@ use std::{net::SocketAddr, str::FromStr};
 
 use crate::{
     ngrok_wrapper::Header,
-    proxy::{ProxyManager, ProxyMapping, tcp::TcpProxyManager},
+    proxy::{ProxyManager, ProxyMapping, http::HttpProxyManager},
 };
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
@@ -14,11 +14,11 @@ mod proxy;
 mod window;
 
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
-pub static PROXY_MANAGER: OnceCell<TcpProxyManager> = OnceCell::const_new();
+pub static PROXY_MANAGER: OnceCell<HttpProxyManager> = OnceCell::const_new();
 
-pub async fn get_proxy_manager() -> &'static TcpProxyManager {
+pub async fn get_proxy_manager() -> &'static HttpProxyManager {
     PROXY_MANAGER
-        .get_or_init(|| async { TcpProxyManager::new() })
+        .get_or_init(|| async { HttpProxyManager::new() })
         .await
 }
 
