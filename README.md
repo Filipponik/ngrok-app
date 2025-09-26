@@ -35,10 +35,8 @@
 
 ## 📸 Screenshots
 
-> *Screenshots will be added here*
-
 <div align="center">
-  <img src="img/welcome.png" alt="Welcome Page" width="45%" />
+  <img src="img/welcome.png" alt="Welcome " width="45%" />
   <img src="img/home.png" alt="Home" width="45%" />
 </div>
 
