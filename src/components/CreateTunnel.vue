@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { Bottom, Plus, Top } from "@element-plus/icons-vue";
+import { Bottom, Plus, Top, QuestionFilled } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
 import { openTunnel } from "@/services/tunnel";
 import { invoke } from "@tauri-apps/api/core";
 import { showError } from "@/services/message";
 import HeadersEditor, { type Header } from "./HeadersEditor.vue";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 const advanced = ref(false);
 const port = ref(80);
@@ -90,24 +91,41 @@ onMounted(async () => {
               <el-text class="text-sm font-medium text-gray-700"
                 >Domains</el-text
               >
-              <el-select
-                v-model="domain"
-                filterable
-                allow-create
-                default-first-option
-                placeholder="Domain"
-                :reserve-keyword="false"
-                class="mb-3 w-full"
-              >
-                <template #prefix>https://</template>
-                <el-option
-                  v-for="item in staticDomains"
-                  :key="item"
-                  :label="item"
-                  :value="item"
-                />
-              </el-select>
-
+              <div class="flex gap-2">
+                <el-select
+                  v-model="domain"
+                  filterable
+                  allow-create
+                  default-first-option
+                  placeholder="Domain"
+                  :reserve-keyword="false"
+                  class="mb-3 w-full"
+                >
+                  <template #prefix>https://</template>
+                  <el-option
+                    v-for="item in staticDomains"
+                    :key="item"
+                    :label="item"
+                    :value="item"
+                  />
+                </el-select>
+                <el-tooltip placement="top" raw-content>
+                  <template #content>
+                    <div>
+                      Custom domains can be created
+                      <el-link
+                        type="primary"
+                        @click="openPath('https://dashboard.ngrok.com/domains')"
+                      >
+                        here
+                      </el-link>
+                    </div>
+                  </template>
+                  <el-icon color="#999999" size="15" class="my-2">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </div>
               <el-input
                 class="mb-3 w-full"
                 type="text"
