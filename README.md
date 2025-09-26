@@ -37,15 +37,14 @@
 
 > *Screenshots will be added here*
 
-<!-- Placeholder for screenshots -->
 <div align="center">
-  <img src="#" alt="Main Dashboard" width="45%" />
-  <img src="#" alt="Tunnel Creation" width="45%" />
+  <img src="img/welcome.png" alt="Main Dashboard" width="45%" />
+  <img src="img/home.png" alt="Tunnel Creation" width="45%" />
 </div>
 
 <div align="center">
-  <img src="#" alt="Advanced Settings" width="45%" />
-  <img src="#" alt="Tunnel Management" width="45%" />
+  <img src="img/create_tinnel.png" alt="Advanced Settings" width="45%" />
+  <img src="img/list_tunnels.png" alt="Tunnel Management" width="45%" />
 </div>
 
 ## 🚀 Getting Started
@@ -71,12 +70,12 @@
 
 3. **Start development server**
    ```bash
-   pnpm run tauri dev
+   pnpm tauri dev
    ```
 
 4. **Build for production**
    ```bash
-   npm run tauri build
+   npm tauri build
    ```
 
 ## 💡 How to Use
@@ -128,8 +127,8 @@
 
 ```
 ngrok-app/
-├── src/                    # Vue.js frontend
-│   ├── components/         # Reusable Vue components
+├── src/                   # Vue.js frontend
+│   ├── components/        # Reusable Vue components
 │   ├── pages/             # Application pages
 │   ├── services/          # API and business logic
 │   └── assets/            # Static assets
