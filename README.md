@@ -66,12 +66,12 @@
 
 2. **Install dependencies**
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Start development server**
    ```bash
-   npm run tauri dev
+   pnpm run tauri dev
    ```
 
 4. **Build for production**
