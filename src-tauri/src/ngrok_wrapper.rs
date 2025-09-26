@@ -38,6 +38,8 @@ pub struct TunnelOpened {
     pub request_headers: Vec<Header>,
     pub response_headers: Vec<Header>,
     pub basic_auth: Option<BasicAuth>,
+    pub name: Option<String>,
+    pub description: Option<String>,
     #[serde(skip)]
     inner: Forwarder<HttpTunnel>,
 }
@@ -48,6 +50,8 @@ pub async fn open_tunnel(
     request_headers: Vec<Header>,
     response_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
+    name: Option<String>,
+    description: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = port.into();
     let domain: Option<String> = domain.and_then(|domain| Some(domain.into()));
@@ -76,7 +80,12 @@ pub async fn open_tunnel(
         .listen_and_forward(Url::parse(&format!("http://localhost:{}", port.clone()))?)
         .await?;
 
-    println!("Ngrok tunnel established at {}", tunnel.url());
+    let tunnel_name = name.as_deref().unwrap_or("Unnamed");
+    println!(
+        "Ngrok tunnel '{}' established at {}",
+        tunnel_name,
+        tunnel.url()
+    );
 
     let tunnels = get_tunnels().await;
     let tunnel_opened = TunnelOpened {
@@ -87,6 +96,8 @@ pub async fn open_tunnel(
         request_headers: request_headers,
         response_headers: response_headers,
         basic_auth: basic_auth,
+        name: name,
+        description: description,
         inner: tunnel,
     };
 

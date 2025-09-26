@@ -36,6 +36,8 @@ struct TunnelOpen {
     request_headers: Vec<Header>,
     response_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
+    name: Option<String>,
+    description: Option<String>,
 }
 
 #[tauri::command]
@@ -66,6 +68,8 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
         request_headers,
         command.response_headers,
         command.basic_auth,
+        command.name,
+        command.description,
     )
     .await
     .map_err(|e| format!("Failed to create tunnel: {}", e))?;
@@ -111,6 +115,8 @@ struct TunnelResponse {
     request_headers: Vec<Header>,
     response_headers: Vec<Header>,
     basic_auth: Option<BasicAuth>,
+    name: Option<String>,
+    description: Option<String>,
 }
 
 #[tauri::command]
@@ -139,6 +145,8 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
                 request_headers: tunnel.request_headers.clone(),
                 response_headers: tunnel.response_headers.clone(),
                 basic_auth: tunnel.basic_auth.clone(),
+                name: tunnel.name.clone(),
+                description: tunnel.description.clone(),
             }
         })
         .collect()
