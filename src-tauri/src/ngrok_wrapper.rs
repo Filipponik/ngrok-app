@@ -22,9 +22,13 @@ pub struct Header {
 
 impl Header {
     pub fn new_host_rewrite(host: impl Into<String>) -> Self {
-        Header {
-            name: "Host".to_string(),
-            value: host.into(),
+        Self::new("Host".to_string(), host.into())
+    }
+
+    pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            value: value.into(),
         }
     }
 }
@@ -54,7 +58,7 @@ pub async fn open_tunnel(
     description: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = port.into();
-    let domain: Option<String> = domain.and_then(|domain| Some(domain.into()));
+    let domain: Option<String> = domain.map(Into::into);
     // Set up ngrok tunnel
     let session = get_session("").await.unwrap();
 
@@ -64,20 +68,20 @@ pub async fn open_tunnel(
     }
 
     for header in &request_headers {
-        tunnel_builder.request_header(header.name.clone(), header.value.clone());
+        tunnel_builder.request_header(&header.name, &header.value);
     }
 
     for header in &response_headers {
-        tunnel_builder.response_header(header.name.clone(), header.value.clone());
+        tunnel_builder.response_header(&header.name, &header.value);
     }
 
-    if let Some(basic_auth) = basic_auth.clone() {
-        tunnel_builder.basic_auth(basic_auth.username.clone(), basic_auth.password.clone());
+    if let Some(auth) = basic_auth.clone() {
+        tunnel_builder.basic_auth(auth.username, auth.password);
     }
 
     // Forward HTTP traffic from ngrok to the local server
     let tunnel: Forwarder<HttpTunnel> = tunnel_builder
-        .listen_and_forward(Url::parse(&format!("http://localhost:{}", port.clone()))?)
+        .listen_and_forward(Url::parse(&format!("http://localhost:{port}"))?)
         .await?;
 
     let tunnel_name = name.as_deref().unwrap_or("Unnamed");
