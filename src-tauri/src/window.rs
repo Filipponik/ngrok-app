@@ -3,52 +3,72 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconEvent},
 };
 
+trait WindowLike {
+    fn get_handle(&self) -> tauri::AppHandle;
+    fn hide(&self) -> tauri::Result<()>;
+    fn show(&self) -> tauri::Result<()>;
+    fn unminimize(&self) -> tauri::Result<()>;
+    fn set_focus(&self) -> tauri::Result<()>;
+}
+
+impl WindowLike for Window {
+    fn get_handle(&self) -> tauri::AppHandle {
+        self.app_handle().clone()
+    }
+    fn hide(&self) -> tauri::Result<()> {
+        Window::hide(self)
+    }
+    fn show(&self) -> tauri::Result<()> {
+        Window::show(self)
+    }
+    fn unminimize(&self) -> tauri::Result<()> {
+        Window::unminimize(self)
+    }
+    fn set_focus(&self) -> tauri::Result<()> {
+        Window::set_focus(self)
+    }
+}
+
+impl WindowLike for WebviewWindow {
+    fn get_handle(&self) -> tauri::AppHandle {
+        self.app_handle().clone()
+    }
+    fn hide(&self) -> tauri::Result<()> {
+        WebviewWindow::hide(self)
+    }
+    fn show(&self) -> tauri::Result<()> {
+        WebviewWindow::show(self)
+    }
+    fn unminimize(&self) -> tauri::Result<()> {
+        WebviewWindow::unminimize(self)
+    }
+    fn set_focus(&self) -> tauri::Result<()> {
+        WebviewWindow::set_focus(self)
+    }
+}
+
 pub trait HideToTray {
     fn hide_to_tray(&self);
     fn show_from_tray(&self);
 }
 
-impl HideToTray for WebviewWindow {
+impl<T: WindowLike> HideToTray for T {
     fn hide_to_tray(&self) {
         let _ = self.hide();
 
         #[cfg(target_os = "macos")]
         {
             let _ = self
-                .app_handle()
+                .get_handle()
                 .set_activation_policy(tauri::ActivationPolicy::Accessory);
         }
     }
+
     fn show_from_tray(&self) {
         #[cfg(target_os = "macos")]
         {
             let _ = self
-                .app_handle()
-                .set_activation_policy(tauri::ActivationPolicy::Regular);
-        }
-
-        let _ = self.unminimize();
-        let _ = self.show();
-        let _ = self.set_focus();
-    }
-}
-
-impl HideToTray for Window {
-    fn hide_to_tray(&self) {
-        let _ = self.hide();
-
-        #[cfg(target_os = "macos")]
-        {
-            let _ = self
-                .app_handle()
-                .set_activation_policy(tauri::ActivationPolicy::Accessory);
-        }
-    }
-    fn show_from_tray(&self) {
-        #[cfg(target_os = "macos")]
-        {
-            let _ = self
-                .app_handle()
+                .get_handle()
                 .set_activation_policy(tauri::ActivationPolicy::Regular);
         }
 
