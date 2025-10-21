@@ -52,6 +52,9 @@
 - [Node.js](https://nodejs.org/) (v18 or higher)
 - [Rust](https://rustup.rs/) (latest stable)
 - [ngrok account](https://ngrok.com/) (free tier available)
+- `javascriptcoregtk` and `webkit2gtk` libs for Linux build
+  - `pacman -S webkit2gtk-4.1` for Arch
+  - `apt install libwebkit2gtk-4.1-dev` for Debian/Ubuntu
 
 ### Installation
 
@@ -73,9 +76,8 @@
 
 4. **Build for production**
    ```bash
-   npm tauri build
+   pnpm tauri build
    ```
-
 ## 💡 How to Use
 
 ### Creating Your First Tunnel
