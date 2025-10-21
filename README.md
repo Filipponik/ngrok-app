@@ -52,9 +52,7 @@
 - [Node.js](https://nodejs.org/) (v18 or higher)
 - [Rust](https://rustup.rs/) (latest stable)
 - [ngrok account](https://ngrok.com/) (free tier available)
-- `javascriptcoregtk` and `webkit2gtk` libs for Linux build
-  - `pacman -S webkit2gtk-4.1` for Arch
-  - `apt install libwebkit2gtk-4.1-dev` for Debian/Ubuntu
+- Prepared environment for tauri, check [tauri docs page](https://tauri.app/start/prerequisites/)
 
 ### Installation
 
