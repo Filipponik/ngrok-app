@@ -2,11 +2,15 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use redb::{Database, TableDefinition};
 use tauri::Manager;
 use tokio::sync::{Mutex, OnceCell};
 
-use crate::APP_HANDLE;
+use crate::{
+    APP_HANDLE,
+    storage::{Storage, StorageError},
+};
 
 // Table definitions
 const CONFIG_TABLE: TableDefinition<&str, String> = TableDefinition::new("user_config");
@@ -88,7 +92,7 @@ async fn get_database_path() -> DbResult<PathBuf> {
 }
 
 /// Retrieve the session token from the database
-pub async fn get_session_token() -> DbResult<String> {
+async fn get_session_token() -> DbResult<String> {
     let database = get_database().await?;
     let db = database.lock().await;
 
@@ -102,7 +106,7 @@ pub async fn get_session_token() -> DbResult<String> {
 }
 
 /// Save a session token to the database
-pub async fn save_session_token(token: impl Into<String>) -> DbResult<()> {
+async fn save_session_token(token: impl Into<String>) -> DbResult<()> {
     let database = get_database().await?;
     let db = database.lock().await;
 
@@ -117,13 +121,13 @@ pub async fn save_session_token(token: impl Into<String>) -> DbResult<()> {
 }
 
 /// Retrieve all static domains as a HashSet
-pub async fn get_static_domains() -> DbResult<HashSet<String>> {
+async fn get_static_domains() -> DbResult<HashSet<String>> {
     let database = get_database().await?;
     let db = database.lock().await;
 
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(DOMAINS_TABLE)?;
-
+    // daily-ample-kit.ngrok-free.app
     match table.get(DOMAINS_KEY)? {
         Some(domains) => Ok(HashSet::from_iter(domains.value())),
         None => Ok(HashSet::new()), // Return empty set if no domains exist
@@ -131,7 +135,7 @@ pub async fn get_static_domains() -> DbResult<HashSet<String>> {
 }
 
 /// Add a static domain to the database (idempotent operation)
-pub async fn save_static_domain(domain: impl Into<String>) -> DbResult<()> {
+async fn save_static_domain(domain: impl Into<String>) -> DbResult<()> {
     let domain = domain.into();
     let mut domains = get_static_domains().await?;
 
@@ -158,4 +162,30 @@ async fn save_all_static_domains(domains: HashSet<String>) -> DbResult<()> {
     write_txn.commit()?;
 
     Ok(())
+}
+
+pub struct DbStorage;
+
+#[async_trait]
+impl Storage for DbStorage {
+    type ErrorType = DbError;
+
+    async fn save_static_domain(
+        &self,
+        domain: String,
+    ) -> Result<(), StorageError<Self::ErrorType>> {
+        save_static_domain(&domain).await.map_err(StorageError::new)
+    }
+
+    async fn get_static_domains(&self) -> Result<HashSet<String>, StorageError<Self::ErrorType>> {
+        get_static_domains().await.map_err(StorageError::new)
+    }
+
+    async fn save_session_token(&self, token: String) -> Result<(), StorageError<Self::ErrorType>> {
+        save_session_token(&token).await.map_err(StorageError::new)
+    }
+
+    async fn get_session_token(&self) -> Result<String, StorageError<Self::ErrorType>> {
+        get_session_token().await.map_err(StorageError::new)
+    }
 }

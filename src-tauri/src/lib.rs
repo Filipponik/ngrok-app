@@ -3,15 +3,25 @@ use std::{net::SocketAddr, str::FromStr};
 use crate::{
     ngrok_wrapper::Header,
     proxy::{ProxyManager, ProxyMapping, http::HttpProxyManager},
+    storage::Storage,
 };
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::{Mutex, OnceCell};
 
 mod db;
+mod file_storage;
 mod ngrok_wrapper;
 mod proxy;
+pub mod storage;
 mod window;
+
+#[derive(Default)]
+struct AppState<TStorage: Storage> {
+    storage: TStorage,
+}
+
+type CurrentStorage = file_storage::FileStorage;
 
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
 pub static PROXY_MANAGER: OnceCell<HttpProxyManager> = OnceCell::const_new();
@@ -41,7 +51,10 @@ struct TunnelOpen {
 }
 
 #[tauri::command]
-async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
+async fn tunnel_open(
+    command: TunnelOpen,
+    state: State<'_, Mutex<AppState<CurrentStorage>>>,
+) -> Result<(), String> {
     let domain = command
         .domain
         .and_then(|d| if d.is_empty() { None } else { Some(d) });
@@ -75,7 +88,7 @@ async fn tunnel_open(command: TunnelOpen) -> Result<(), String> {
     .map_err(|e| format!("Failed to create tunnel: {}", e))?;
 
     if let Some(domain) = domain {
-        let _ = db::save_static_domain(&domain).await;
+        let _ = state.lock().await.storage.save_static_domain(domain).await;
     }
 
     Ok(())
@@ -153,10 +166,17 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
 }
 
 #[tauri::command]
-async fn open_session(auth_token: Option<&str>) -> Result<(), String> {
+async fn open_session(
+    auth_token: Option<&str>,
+    state: State<'_, Mutex<AppState<CurrentStorage>>>,
+) -> Result<(), String> {
     let token = match auth_token {
         Some(input_token) => input_token.to_string(),
-        None => db::get_session_token()
+        None => state
+            .lock()
+            .await
+            .storage
+            .get_session_token()
             .await
             .map_err(|_e| format!("No token found"))?,
     };
@@ -164,15 +184,25 @@ async fn open_session(auth_token: Option<&str>) -> Result<(), String> {
     println!("Open session with {token}");
 
     ngrok_wrapper::get_session(token.clone()).await?;
-    db::save_session_token(&token)
+    state
+        .lock()
+        .await
+        .storage
+        .save_session_token(token)
         .await
         .map_err(|err| format!("Failed to save session token: {}", err))?;
     Ok(())
 }
 
 #[tauri::command]
-async fn get_static_domains() -> Result<Vec<String>, String> {
-    Ok(db::get_static_domains()
+async fn get_static_domains(
+    state: State<'_, Mutex<AppState<CurrentStorage>>>,
+) -> Result<Vec<String>, String> {
+    Ok(state
+        .lock()
+        .await
+        .storage
+        .get_static_domains()
         .await
         .map_err(|err| err.to_string())?
         .into_iter()
@@ -193,6 +223,10 @@ pub fn run() {
             get_static_domains,
         ])
         .setup(|app: &mut tauri::App| {
+            app.manage(Mutex::new(AppState {
+                storage: file_storage::FileStorage::new(&app.handle()).unwrap(),
+            }));
+
             window::window_setup_handler(app)?;
             APP_HANDLE.set(Mutex::new(app.handle().clone())).unwrap();
 
