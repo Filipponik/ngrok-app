@@ -152,8 +152,8 @@ async fn tunnel_list() -> Vec<TunnelResponse> {
             TunnelResponse {
                 id: tunnel.id.clone(),
                 url: tunnel.url.clone(),
-                local_port: local_port,
-                proxy_port: proxy_port,
+                local_port,
+                proxy_port,
                 is_static_domain: tunnel.is_static_domain,
                 request_headers: tunnel.request_headers.clone(),
                 response_headers: tunnel.response_headers.clone(),
@@ -178,7 +178,7 @@ async fn open_session(
             .storage
             .get_session_token()
             .await
-            .map_err(|_e| format!("No token found"))?,
+            .map_err(|_e| "No token found")?,
     };
 
     println!("Open session with {token}");
@@ -224,7 +224,7 @@ pub fn run() {
         ])
         .setup(|app: &mut tauri::App| {
             app.manage(Mutex::new(AppState {
-                storage: file_storage::FileStorage::new(&app.handle()).unwrap(),
+                storage: file_storage::FileStorage::new(app.handle()).unwrap(),
             }));
 
             window::window_setup_handler(app)?;

@@ -79,12 +79,9 @@ impl<T: WindowLike> HideToTray for T {
 }
 
 pub fn window_event_handler(window: &Window, event: &WindowEvent) {
-    match event {
-        WindowEvent::CloseRequested { api, .. } => {
-            api.prevent_close();
-            let _ = window.hide_to_tray();
-        }
-        _ => {}
+    if let WindowEvent::CloseRequested { api, .. } = event {
+        api.prevent_close();
+        window.hide_to_tray();
     }
 }
 

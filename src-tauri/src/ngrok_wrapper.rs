@@ -97,11 +97,11 @@ pub async fn open_tunnel(
         url: tunnel.url().to_string(),
         port,
         is_static_domain: domain.is_some(),
-        request_headers: request_headers,
-        response_headers: response_headers,
-        basic_auth: basic_auth,
-        name: name,
-        description: description,
+        request_headers,
+        response_headers,
+        basic_auth,
+        name,
+        description,
         inner: tunnel,
     };
 

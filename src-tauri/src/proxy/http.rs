@@ -27,6 +27,12 @@ struct ProxyMappingInternal {
     target_addr: SocketAddr,
 }
 
+impl Default for HttpProxyManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HttpProxyManager {
     pub fn new() -> Self {
         let (control_tx, _) = broadcast::channel(100);
@@ -66,8 +72,6 @@ impl HttpProxyManager {
 
     async fn proxy_loop(listener: TcpListener, target_addr: SocketAddr) -> Result<()> {
         while let Ok((stream, _)) = listener.accept().await {
-            let target_addr = target_addr;
-
             tokio::spawn(async move {
                 let io = TokioIo::new(stream);
 

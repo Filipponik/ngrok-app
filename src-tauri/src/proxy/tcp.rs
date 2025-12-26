@@ -1,3 +1,5 @@
+#![allow(dead_code, unused)]
+
 use async_trait::async_trait;
 use dashmap::DashMap;
 use std::{net::SocketAddr, sync::Arc};
@@ -68,8 +70,6 @@ impl TcpProxyManager {
         let port: u16 = listener.local_addr()?.port();
         while let Ok((inbound, _)) = listener.accept().await {
             let control_tx = control_tx.clone();
-            let target_addr = target_addr;
-
             tokio::spawn(async move {
                 println!("Proxy started");
                 if let Err(e) =
