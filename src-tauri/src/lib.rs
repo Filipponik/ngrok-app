@@ -9,8 +9,6 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::{Mutex, OnceCell};
 
-mod db;
-mod file_storage;
 mod ngrok_wrapper;
 mod proxy;
 pub mod storage;
@@ -21,7 +19,7 @@ struct AppState<TStorage: Storage> {
     storage: TStorage,
 }
 
-type CurrentStorage = file_storage::FileStorage;
+type CurrentStorage = storage::file::FileStorage;
 
 pub static APP_HANDLE: OnceCell<Mutex<AppHandle>> = OnceCell::const_new();
 pub static PROXY_MANAGER: OnceCell<HttpProxyManager> = OnceCell::const_new();
@@ -224,7 +222,7 @@ pub fn run() {
         ])
         .setup(|app: &mut tauri::App| {
             app.manage(Mutex::new(AppState {
-                storage: file_storage::FileStorage::new(app.handle()).unwrap(),
+                storage: storage::file::FileStorage::new(app.handle()).unwrap(),
             }));
 
             window::window_setup_handler(app)?;

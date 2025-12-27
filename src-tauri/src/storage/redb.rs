@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use redb::{Database, TableDefinition};
+use redb::{Database, ReadableTable, TableDefinition};
 use tauri::Manager;
 use tokio::sync::{Mutex, OnceCell};
 
@@ -22,7 +22,7 @@ const DOMAINS_TABLE: TableDefinition<&str, Vec<String>> = TableDefinition::new("
 const SESSION_TOKEN_KEY: &str = "session_token";
 const DOMAINS_KEY: &str = "domains";
 
-/// Database errors with more descriptive messages
+/// Database errors with more descriptive messages and context
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {
     #[error("App handle not initialized")]
@@ -129,25 +129,43 @@ async fn get_static_domains() -> DbResult<HashSet<String>> {
 
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(DOMAINS_TABLE)?;
-    // daily-ample-kit.ngrok-free.app
+
     match table.get(DOMAINS_KEY)? {
-        Some(domains) => Ok(HashSet::from_iter(domains.value())),
-        None => Ok(HashSet::new()), // Return empty set if no domains exist
+        Some(domains) => Ok(domains.value().into_iter().collect()),
+        None => Ok(HashSet::new()),
     }
 }
 
 /// Add a static domain to the database (idempotent operation)
+/// Uses a single transaction for both reading and writing to minimize database locks
 async fn save_static_domain(domain: impl Into<String>) -> DbResult<()> {
     let domain = domain.into();
-    let mut domains = get_static_domains().await?;
+    let database = get_database().await?;
+    let db = database.lock().await;
 
-    // Early return if domain already exists
-    if domains.contains(&domain) {
-        return Ok(());
+    let write_txn = db.begin_write()?;
+    {
+        let mut table = write_txn.open_table(DOMAINS_TABLE)?;
+
+        // Read current domains within the same transaction
+        let current_domains: HashSet<String> = match table.get(DOMAINS_KEY)? {
+            Some(domains) => domains.value().into_iter().collect(),
+            None => HashSet::new(),
+        };
+
+        // Check if domain already exists
+        if current_domains.contains(&domain) {
+            return Ok(());
+        }
+
+        // Add new domain and save
+        let mut new_domains: Vec<String> = current_domains.into_iter().collect();
+        new_domains.push(domain);
+        table.insert(DOMAINS_KEY, new_domains)?;
     }
+    write_txn.commit()?;
 
-    domains.insert(domain);
-    save_all_static_domains(domains).await
+    Ok(())
 }
 
 /// Save all static domains to the database
