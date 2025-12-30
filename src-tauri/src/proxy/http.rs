@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
@@ -6,15 +7,34 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Request, Response, StatusCode, body::Incoming};
 use hyper_util::rt::TokioIo;
+use std::time::Duration;
 use std::{convert::Infallible, net::SocketAddr, sync::Arc};
 use tokio::{net::TcpListener, sync::broadcast};
 
 use crate::proxy::{Error, ProxyManager, ProxyMapping, Result};
 
 #[derive(Debug, Clone)]
+struct RequestResponseLog {
+    id: u32,
+    timestamp: DateTime<Utc>,
+    source_port: u16,
+    method: String,
+    uri: String,
+    request_headers: Vec<(String, String)>,
+    request_body: Option<Vec<u8>>,
+    status_code: Option<u16>,
+    response_headers: Vec<(String, String)>,
+    response_body: Option<Vec<u8>>,
+    duration_ms: Duration,
+}
+
+#[derive(Debug, Clone)]
 pub struct HttpProxyManager {
     mappings: Arc<DashMap<u16, ProxyMappingInternal>>,
     control_tx: broadcast::Sender<ControlMessage>,
+    request_history: Arc<DashMap<u32, RequestResponseLog>>,
+    next_request_id: Arc<std::sync::atomic::AtomicU32>,
+    max_history_size: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +59,9 @@ impl HttpProxyManager {
         Self {
             mappings: Arc::new(DashMap::new()),
             control_tx,
+            request_history: Arc::new(DashMap::new()),
+            next_request_id: Arc::new(std::sync::atomic::AtomicU32::new(1)),
+            max_history_size: 1000,
         }
     }
 
