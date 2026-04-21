@@ -1,0 +1,61 @@
+version: '3'
+
+tasks:
+  build:
+    cmds:
+      - pnpm run tauri build
+
+  dev:
+    cmds:
+      - pnpm run tauri dev
+
+  clippy:
+    dir: src-tauri
+    cmds:
+      - cargo clippy --all-targets --all-features
+    sources:
+      - src-tauri/src/**/*.rs
+      - src-tauri/build.rs
+      - src-tauri/Cargo.*
+
+  check:
+    dir: src-tauri
+    sources:
+      - src-tauri/src/**/*.rs
+      - src-tauri/build.rs
+      - src-tauri/Cargo.*
+    cmds:
+      - cargo check
+
+  format:
+    dir: src-tauri
+    sources:
+      - src-tauri/src/**/*.rs
+      - src-tauri/build.rs
+      - src-tauri/Cargo.*
+    cmds:
+      - cargo fmt
+
+  fix:
+    dir: src-tauri
+    sources:
+      - src-tauri/src/**/*.rs
+      - src-tauri/build.rs
+      - src-tauri/Cargo.*
+    cmds:
+      - cargo fix --allow-dirty --allow-staged
+
+  test:
+    dir: src-tauri
+    sources:
+      - src-tauri/src/**/*.rs
+      - src-tauri/build.rs
+      - src-tauri/Cargo.*
+    cmds:
+      - cargo test
+
+  fixer:
+    deps:
+      - clippy
+      - format
+      - fix
